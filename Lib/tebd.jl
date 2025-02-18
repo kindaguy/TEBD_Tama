@@ -228,9 +228,9 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
         s2 = s[j+1]
 
         hj = coups[j] * op("Adag", s1) * op("A", s2) +
-             coups[j] * op("A", s1) * op("Adag", s2) +
-             0.5 * freqs[j] * op("N", s1) * op("Id", s2) +
-             0.5 * freqs[j+1] * op("N", s2) * op("Id", s1)
+            coups[j] * op("A", s1) * op("Adag", s2) +
+            0.5 * freqs[j-1] * op("N", s1) * op("Id", s2) +
+            0.5 * freqs[j] * op("N", s2) * op("Id", s1)
         
         # #Debug
         # if j==2
@@ -309,8 +309,9 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
             #writedlm(ioPopMeas, [t expect(psiAppo, "N",sites=2:2)], ',')
 
             #Norm measure
-            appoNorm = Gammas[1]*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
-            writedlm(ioNormCheck, [t scalar(appoNorm)],',')
+            #Maybe Lambdas[1]*Lambdas[1] is enough since > b < * dag(> b < ) = b * b 
+            appoNorm = Gammas[1]*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
+            writedlm(ioNormCheck, [t sqrt(scalar(appoNorm))],',')
             push!(normCheck, scalar(appoNorm))
         end
         
@@ -334,7 +335,7 @@ end
 function apply_TEBD(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim)
 
     #println("first odd")
-    Gammas, Lambdas = apply_odd(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim=maxBondDim)
+    Gammas, Lambdas = apply_odd(gates, Gammas, Lambdas; cutoff, mindim=1, maxBondDim=maxBondDim)
     #println("Gammas[1]",Gammas[1])
     #println("Gammas[2]",Gammas[2])
     #println("After first gate:")
@@ -342,11 +343,11 @@ function apply_TEBD(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim)
     #print_alternated_inds(Gammas, Lambdas)
     #pippo = readline()
     #println("the even step")
-    Gammas, Lambdas = apply_even(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim=maxBondDim)
+    Gammas, Lambdas = apply_even(gates, Gammas, Lambdas; cutoff, mindim=1, maxBondDim=maxBondDim)
 
     #println("second odd")
     #println("Gammas[1]: ", Gammas[1])
-    Gammas, Lambdas = apply_odd(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim=maxBondDim)    
+    Gammas, Lambdas = apply_odd(gates, Gammas, Lambdas; cutoff, mindim=1, maxBondDim=maxBondDim)    
     #print_alternated_inds(Gammas, Lambdas) 
     return Gammas, Lambdas
 end
