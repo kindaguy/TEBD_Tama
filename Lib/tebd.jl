@@ -123,6 +123,20 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             writedlm(ioMagMeas, [t scalar(appo)], ',')
             push!(magMeas, scalar(appo))
 
+            #Chain occupation measure
+            #this is delicate: we need to measure all the chain sites
+            #This will be painful, but needed.
+            #Here I implement full measure, but I suspect that it 
+            #can be otimized somehow:
+            #1) Far sites are perturbed at later Times
+            #2) This can be parallelized over threads: instantiate whole array
+            occMeasures = Vector{ComplexF64}([])
+            for i in 2:ntot-1
+                appoOcc = Lambdas[i-1]*Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*Lambdas[i]*conj(Gammas[i])
+                push!(occMeasures, scalar(appoOcc))
+            end
+            writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
+
             #Norm measure
             appoNorm = Gammas[1]*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
             writedlm(ioNormCheck, [t scalar(appoNorm)],',')
@@ -140,6 +154,178 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     close(ioTv)
     close(ioMagMeas)
     close(ioNormCheck)
+    close(ioPopMeas)
+
+    return Gammas, Lambdas
+
+end
+
+function SingleEx_evolution_TEBD(Gammas, Lambdas, s; 
+    ϵ,
+    Δ, 
+    sysenvInt::String, 
+    ChainLength, 
+    tau, 
+    ttotal,
+    measStep,
+    cutoff=1E-14, 
+    minBondDim=5, 
+    maxBondDim=100, 
+    freqs, 
+    coups)
+
+    #system energy
+    #eps = sysEnergy
+
+    # tot_freqs = vcat([eps], freqs)
+    # tot_freqs[1] == eps && tot_freqs[2] == freqs[1]
+    # freqs = tot_freqs
+
+    #total_size
+    ntot = ChainLength + 1
+
+    println("ChainLength ", ntot)
+    println("length lambda ", length(Lambdas))
+
+    #println(psi0)
+    #psi0 = convert_to_MPS(Gammas, Lambdas, ntot)
+
+    #println(psi0)
+
+    #TO DO: carry out this computation using directly the Vidal Form
+    #initmag = expect(psi0, "Z")
+    initmag = noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+    println("first value of exp Z: ", scalar(initmag))
+
+
+    # # Define the gates as in the trotter formula e^[(F+G)t]=e^[F*t/2]*e^[G*t]*e^[F*t/2]
+    # # F odd gate, G even gate
+
+    gates = ITensor[]
+
+    #NOTE: generalize as to include (1+σ_z)/2 required, for example, in dimer sims
+    h_start = 
+            #     0.5 * ϵ * op("Z", s[1]) * op("Id", s[2]) +
+            #   0.5 * Δ * op("X",s[1]) * op("Id",s[2]) +
+            #Local energy system: ϵ(1+σz)/2 
+            0.5 * ϵ * op("Id",s[1]) * op("Id",s[2])+
+            0.5 * ϵ * op("Z",s[1]) * op("Id",s[2])+
+            0.5 * freqs[1] * op("N", s[2]) * op("Id", s[1]) +
+            #Here exchange interaction
+            #(\sigmaMinus * Adag + sigmaPlus * A)  
+            coups[1] * op("Splus", s[1]) * op("A", s[2]) +
+              coups[1] * op("Adag", s[2]) * op("Sminus", s[1])
+    push!(gates, exp(-im * tau / 2 * h_start)) #first one is always divided by 2
+
+        #Debug
+        #println("hstart: ",h_start)
+    for j in 2:(ntot-2)
+
+        t = isodd(j) ? tau / 2 : tau
+
+
+        s1 = s[j]
+        s2 = s[j+1]
+
+        hj = coups[j] * op("Adag", s1) * op("A", s2) +
+             coups[j] * op("A", s1) * op("Adag", s2) +
+             0.5 * freqs[j] * op("N", s1) * op("Id", s2) +
+             0.5 * freqs[j+1] * op("N", s2) * op("Id", s1)
+        
+        # #Debug
+        # if j==2
+        #     println("h2:",hj)
+        # end
+
+        Gj = exp(-im * t * hj)
+        push!(gates, Gj)
+    end
+
+    t = isodd(ntot) ? tau / 2 : tau
+
+    h_end = freqs[ntot-1] * op("N", s[ntot]) * op("Id", s[ntot-1]) +
+            0.5  * freqs[ntot-2] * op("N", s[ntot-1]) * op("Id", s[ntot]) +
+            coups[ntot-1] * op("Adag", s[ntot]) * op("A", s[ntot-1]) +
+            coups[ntot-1] * op("Adag", s[ntot-1]) * op("A", s[ntot])
+
+    push!(gates, exp(-im * t * h_end))
+
+    # Open files to save data 
+    ioMagMeas = open("Data/magMeas_TEBD.dat", "w")
+    ioTv = open("Data/tv_TEBD.dat", "w")
+    ioNormCheck = open("Data/normCheck_TEBD.dat", "w")
+    ioPopMeas = open("Data/popMeas_TEBD.dat","w")
+
+    # If needed save them to be stored in arrays
+    magMeas = Vector{ComplexF64}()
+    tv = Vector{Float64}()
+    normCheck = Vector{ComplexF64}()
+    popMeas = Vector{Vector{ComplexF64}}
+
+    #psiV = MPS[]
+    #LambdasV = Vector{Vector{ITensor}}()
+    #GammasV = Vector{Vector{ITensor}}()
+
+
+    
+    for (step,t) in enumerate(0.0:tau:ttotal)
+        println("tempo: ", t)
+        
+        #psi = convert_to_MPS(Gammas, Lambdas, ntot)
+        if (step-1) % measStep == 0
+            println(ioTv, t)
+            push!(tv, t)
+            
+            
+            #Magnetization measure
+            
+            #Anna's approach
+            #psiAppo = convert_to_MPS(Gammas, Lambdas, ntot)
+            #writedlm(ioMagMeas, [t expect(psiAppo, "Z",sites=1:1)], ',')
+            #appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+            appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
+            
+            # #appo =  noprime!(op("Z",s[1])*Gammas[1])*conj(Gammas[1])
+            writedlm(ioMagMeas, [t scalar(appo)], ',')
+            # push!(magMeas, scalar(appo))
+
+            #Chain occupation measure
+            #this is delicate: we need to measure all the chain sites
+            #This will be painful, but needed.
+            #Here I implement full measure, but I suspect that it 
+            #can be otimized somehow:
+            #1) Far sites are perturbed at later Times
+            #2) This can be parallelized over threads: instantiate whole array
+            occMeasures = Vector{ComplexF64}([])
+            for i in 2:ntot-1
+                appoOcc = Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*dag(Lambdas[i-1]*Gammas[i]*Lambdas[i])
+                #appoOcc = Lambdas[i-1]*Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*Lambdas[i]*conj(Gammas[i])
+                push!(occMeasures, scalar(appoOcc))
+            end
+            writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
+
+
+            
+            #writedlm(ioPopMeas, [t expect(psiAppo, "N",sites=2:2)], ',')
+
+            #Norm measure
+            appoNorm = Gammas[1]*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+            writedlm(ioNormCheck, [t scalar(appoNorm)],',')
+            push!(normCheck, scalar(appoNorm))
+        end
+        
+        #push!(psiV, psi)
+        #push!(GammasV, Gammas)
+        #push!(LambdasV, Lambdas)
+
+        Gammas, Lambdas = apply_TEBD(gates, Gammas, Lambdas; cutoff, mindim=5, maxBondDim=maxBondDim)
+
+    end
+
+    close(ioTv)
+    close(ioMagMeas)
+    close(ioNormCheck)
+    close(ioPopMeas)
 
     return Gammas, Lambdas
 

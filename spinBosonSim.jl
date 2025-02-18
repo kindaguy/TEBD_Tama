@@ -29,7 +29,7 @@ local_dim = 10 #local dimension
 #Simulation time
 tmax=0.2
 #Measurement graining
-mStep = 10
+mStep = 1
 
 #MPS pars
 minBondDim = 10
@@ -74,7 +74,7 @@ sysenvInt = "Z",
 ChainLength = chain_size, 
 tau = τ, 
 ttotal = 20*τ, #tmax,
-measStep = 5,
+measStep = 1,
 freqs = freqs, 
 coups = coups, 
 minBondDim = 5, 
