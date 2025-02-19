@@ -52,7 +52,7 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     #NOTE: generalize as to include (1+σ_z)/2 required, for example, in dimer sims
     h_start = 0.5 * ϵ * op("Z", s[1]) * op("Id", s[2]) +
               0.5 * Δ * op("X",s[1]) * op("Id",s[2]) +  
-              0.5 * 0.5 * freqs[1] * op("N", s[2]) * op("Id", s[1]) +
+              0.5 * freqs[1] * op("N", s[2]) * op("Id", s[1]) +
               coups[1] * op(sysenvInt, s[1]) * op("A", s[2]) +
               coups[1] * op("Adag", s[2]) * op(sysenvInt, s[1])
     push!(gates, exp(-im * tau / 2 * h_start)) #first one is always divided by 2
@@ -69,8 +69,8 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
 
         hj = coups[j] * op("Adag", s1) * op("A", s2) +
              coups[j] * op("A", s1) * op("Adag", s2) +
-             0.5 * freqs[j] * op("N", s1) * op("Id", s2) +
-             0.5 * freqs[j+1] * op("N", s2) * op("Id", s1)
+             0.5 * freqs[j-1] * op("N", s1) * op("Id", s2) +
+             0.5 * freqs[j] * op("N", s2) * op("Id", s1)
         
         # #Debug
         # if j==2
@@ -119,9 +119,9 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             
             #Magnetization measure
             
-            appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+            appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
             writedlm(ioMagMeas, [t scalar(appo)], ',')
-            push!(magMeas, scalar(appo))
+            #push!(magMeas, scalar(appo))
 
             #Chain occupation measure
             #this is delicate: we need to measure all the chain sites
@@ -132,13 +132,13 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             #2) This can be parallelized over threads: instantiate whole array
             occMeasures = Vector{ComplexF64}([])
             for i in 2:ntot-1
-                appoOcc = Lambdas[i-1]*Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*Lambdas[i]*conj(Gammas[i])
+                appoOcc = Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*dag(Lambdas[i-1]*Gammas[i]*Lambdas[i])
                 push!(occMeasures, scalar(appoOcc))
             end
             writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
 
             #Norm measure
-            appoNorm = Gammas[1]*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+            appoNorm = Gammas[1]*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
             writedlm(ioNormCheck, [t scalar(appoNorm)],',')
             push!(normCheck, scalar(appoNorm))
         end

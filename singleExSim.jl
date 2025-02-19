@@ -68,7 +68,7 @@ Lambdas, Gammas = convert_to_Vidal(psi)
 
 #Ready to go!
 
-SingleEx_evolution_TEBD(Gammas, Lambdas, sysenv;
+finalGammas,finalLambdas  =  SingleEx_evolution_TEBD(Gammas, Lambdas, sysenv;
 ϵ = ϵ,
 Δ = Δ , 
 sysenvInt = "Z",
