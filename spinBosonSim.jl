@@ -8,7 +8,7 @@ using MKL
 
 #Includes
 include("Lib/convert_to_Vidal.jl")
-include("Lib/TEBD.jl")
+include("Lib/tebd.jl")
 
 #System parameters
 
