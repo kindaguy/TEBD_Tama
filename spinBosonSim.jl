@@ -29,7 +29,7 @@ local_dim = 10 #local dimension
 #Simulation time
 tmax=0.2
 #Measurement graining
-mStep = 1
+mStep = 50
 
 #MPS pars
 minBondDim = 10
@@ -73,9 +73,9 @@ SpinBoson_evolution_TEBD(Gammas, Lambdas, sysenv;
 sysenvInt = "Z",
 ChainLength = chain_size, 
 tau = τ, 
-ttotal = 20*τ, #tmax,
-measStep = 1,
+ttotal = tmax,
+measStep = mStep,
 freqs = freqs, 
 coups = coups, 
 minBondDim = 5, 
-cutoff=1E-13)
+cutoff=1E-12)

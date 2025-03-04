@@ -46,6 +46,7 @@ print(coups[1])
 #Define indices
 #System
 sys = siteinds("S=1/2",1);
+#@show sys
 #Environment
 env = [Index(local_dim,"Boson,Site,n=$(i+1)") for i in 1:chain_size]
 #System+environment

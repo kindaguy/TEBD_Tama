@@ -20,27 +20,15 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     freqs, 
     coups)
 
-    #system energy
-    #eps = sysEnergy
-
-    # tot_freqs = vcat([eps], freqs)
-    # tot_freqs[1] == eps && tot_freqs[2] == freqs[1]
-    # freqs = tot_freqs
-
+    
     #total_size
     ntot = ChainLength + 1
 
     println("ChainLength ", ntot)
     println("length lambda ", length(Lambdas))
 
-    #println(psi0)
-    #psi0 = convert_to_MPS(Gammas, Lambdas, ntot)
-
-    #println(psi0)
-
-    #TO DO: carry out this computation using directly the Vidal Form
-    #initmag = expect(psi0, "Z")
-    initmag = noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+   
+    initmag = noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
     println("first value of exp Z: ", scalar(initmag))
 
 
@@ -49,7 +37,7 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
 
     gates = ITensor[]
 
-    #NOTE: generalize as to include (1+σ_z)/2 required, for example, in dimer sims
+   
     h_start = 0.5 * ϵ * op("Z", s[1]) * op("Id", s[2]) +
               0.5 * Δ * op("X",s[1]) * op("Id",s[2]) +  
               0.5 * freqs[1] * op("N", s[2]) * op("Id", s[1]) +
@@ -57,8 +45,6 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
               coups[1] * op("Adag", s[2]) * op(sysenvInt, s[1])
     push!(gates, exp(-im * tau / 2 * h_start)) #first one is always divided by 2
 
-        #Debug
-        #println("hstart: ",h_start)
     for j in 2:(ntot-2)
 
         t = isodd(j) ? tau / 2 : tau
@@ -72,10 +58,6 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
              0.5 * freqs[j-1] * op("N", s1) * op("Id", s2) +
              0.5 * freqs[j] * op("N", s2) * op("Id", s1)
         
-        # #Debug
-        # if j==2
-        #     println("h2:",hj)
-        # end
 
         Gj = exp(-im * t * hj)
         push!(gates, Gj)
@@ -97,10 +79,10 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     ioPopMeas = open("Data/popMeas_TEBD.dat","w")
 
     # If needed save them to be stored in arrays
-    magMeas = Vector{ComplexF64}()
-    tv = Vector{Float64}()
-    normCheck = Vector{ComplexF64}()
-    popMeas = Vector{Vector{ComplexF64}}
+    # magMeas = Vector{ComplexF64}()
+    # tv = Vector{Float64}()
+    # normCheck = Vector{ComplexF64}()
+    # popMeas = Vector{Vector{ComplexF64}}
 
     #psiV = MPS[]
     #LambdasV = Vector{Vector{ITensor}}()
@@ -114,13 +96,15 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
         #psi = convert_to_MPS(Gammas, Lambdas, ntot)
         if (step-1) % measStep == 0
             println(ioTv, t)
-            push!(tv, t)
+            flush(ioTv)
+            #push!(tv, t)
             
             
             #Magnetization measure
             
             appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
             writedlm(ioMagMeas, [t scalar(appo)], ',')
+            flush(ioMagMeas)
             #push!(magMeas, scalar(appo))
 
             #Chain occupation measure
@@ -136,11 +120,13 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                 push!(occMeasures, scalar(appoOcc))
             end
             writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
+            flush(ioPopMeas)
 
             #Norm measure
             appoNorm = Gammas[1]*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
             writedlm(ioNormCheck, [t scalar(appoNorm)],',')
-            push!(normCheck, scalar(appoNorm))
+            flush(ioNormCheck)
+            #push!(normCheck, scalar(appoNorm))
         end
         
         #push!(psiV, psi)
@@ -194,7 +180,7 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
 
     #TO DO: carry out this computation using directly the Vidal Form
     #initmag = expect(psi0, "Z")
-    initmag = noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*Lambdas[1]*conj(Gammas[1])
+    initmag = noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
     println("first value of exp Z: ", scalar(initmag))
 
 
@@ -203,10 +189,7 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
 
     gates = ITensor[]
 
-    #NOTE: generalize as to include (1+σ_z)/2 required, for example, in dimer sims
     h_start = 
-            #     0.5 * ϵ * op("Z", s[1]) * op("Id", s[2]) +
-            #   0.5 * Δ * op("X",s[1]) * op("Id",s[2]) +
             #Local energy system: ϵ(1+σz)/2 
             0.5 * ϵ * op("Id",s[1]) * op("Id",s[2])+
             0.5 * ϵ * op("Z",s[1]) * op("Id",s[2])+
@@ -214,11 +197,10 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
             #Here exchange interaction
             #(\sigmaMinus * Adag + sigmaPlus * A)  
             coups[1] * op("Splus", s[1]) * op("A", s[2]) +
-              coups[1] * op("Adag", s[2]) * op("Sminus", s[1])
+            coups[1] * op("Adag", s[2]) * op("Sminus", s[1])
     push!(gates, exp(-im * tau / 2 * h_start)) #first one is always divided by 2
 
-        #Debug
-        #println("hstart: ",h_start)
+
     for j in 2:(ntot-2)
 
         t = isodd(j) ? tau / 2 : tau
@@ -232,10 +214,6 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
             0.5 * freqs[j-1] * op("N", s1) * op("Id", s2) +
             0.5 * freqs[j] * op("N", s2) * op("Id", s1)
         
-        # #Debug
-        # if j==2
-        #     println("h2:",hj)
-        # end
 
         Gj = exp(-im * t * hj)
         push!(gates, Gj)
@@ -257,10 +235,10 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
     ioPopMeas = open("Data/popMeas_TEBD.dat","w")
 
     # If needed save them to be stored in arrays
-    magMeas = Vector{ComplexF64}()
-    tv = Vector{Float64}()
-    normCheck = Vector{ComplexF64}()
-    popMeas = Vector{Vector{ComplexF64}}
+    #magMeas = Vector{ComplexF64}()
+    #tv = Vector{Float64}()
+    #normCheck = Vector{ComplexF64}()
+    #popMeas = Vector{Vector{ComplexF64}}
 
     #psiV = MPS[]
     #LambdasV = Vector{Vector{ITensor}}()
@@ -274,7 +252,9 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
         #psi = convert_to_MPS(Gammas, Lambdas, ntot)
         if (step-1) % measStep == 0
             println(ioTv, t)
-            push!(tv, t)
+            #Immediately write to file without buffering
+            flush(ioTv)
+            #push!(tv, t)
             
             
             #Magnetization measure
@@ -287,6 +267,8 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
             
             # #appo =  noprime!(op("Z",s[1])*Gammas[1])*conj(Gammas[1])
             writedlm(ioMagMeas, [t scalar(appo)], ',')
+            #Immediately write to file without buffering
+            flush(ioMagMeas)
             # push!(magMeas, scalar(appo))
 
             #Chain occupation measure
@@ -303,6 +285,8 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
                 push!(occMeasures, scalar(appoOcc))
             end
             writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
+            #Immediately write to file without buffering
+            flush(ioPopMeas)
 
 
             
@@ -312,7 +296,9 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
             #Maybe Lambdas[1]*Lambdas[1] is enough since > b < * dag(> b < ) = b * b 
             appoNorm = Gammas[1]*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
             writedlm(ioNormCheck, [t sqrt(scalar(appoNorm))],',')
-            push!(normCheck, scalar(appoNorm))
+            #Immediately write to file without buffering
+            flush(ioNormCheck)
+            #push!(normCheck, scalar(appoNorm))
         end
         
         #push!(psiV, psi)
