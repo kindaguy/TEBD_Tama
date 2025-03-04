@@ -119,6 +119,8 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                 appoOcc = Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*dag(Lambdas[i-1]*Gammas[i]*Lambdas[i])
                 push!(occMeasures, scalar(appoOcc))
             end
+            appoOcc = Lambdas[ntot-1]*noprime!(op("N",s[ntot])*Gammas[ntot])*dag(Lambdas[ntot-1]*Gammas[ntot])
+            push!(occMeasures, scalar(appoOcc))
             writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
             flush(ioPopMeas)
 
