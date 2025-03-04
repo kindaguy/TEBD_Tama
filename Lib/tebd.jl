@@ -284,6 +284,9 @@ function SingleEx_evolution_TEBD(Gammas, Lambdas, s;
                 #appoOcc = Lambdas[i-1]*Lambdas[i-1]*noprime!(op("N",s[i])*Gammas[i])*Lambdas[i]*Lambdas[i]*conj(Gammas[i])
                 push!(occMeasures, scalar(appoOcc))
             end
+            #Measure last chain site population
+            appoOcc = Lambdas[ntot-1]*noprime!(op("N",s[ntot])*Gammas[ntot])*dag(Lambdas[ntot-1]*Gammas[ntot])
+            push!(occMeasures, scalar(appoOcc))
             writedlm(ioPopMeas, transpose(vcat(t, occMeasures)), ',')
             #Immediately write to file without buffering
             flush(ioPopMeas)

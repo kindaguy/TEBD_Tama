@@ -14,7 +14,7 @@ include("Lib/tebd.jl")
 
 #System
 ϵ = -200. #ϵ/2 σ_z
-Δ = 100. #Δ/2 σ_x
+Δ = 200. #Δ/2 σ_x
 
 #Chain
 chain_size = 400 #100 hosc
