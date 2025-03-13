@@ -9,16 +9,18 @@ using MKL
 #Includes
 include("Lib/convert_to_Vidal.jl")
 include("Lib/tebd.jl")
+include("Lib/prepareState.jl")
+
 
 #System parameters
 
 #System
-ϵ = -200. #ϵ/2 σ_z
-Δ = 200. #Δ/2 σ_x
+ϵ = -630. #ϵ/2 σ_z
+Δ = 1250. #Δ/2 σ_x
 
 #Chain
 chain_size = 400 #100 hosc
-local_dim = 10 #local dimension
+local_dim = 5 #local dimension
 
 #Times
 
@@ -42,22 +44,10 @@ coups = readdlm("Data/FMO_T77_coups.dat",'\n',Float64);  #chain couplings; first
 println(length(freqs))
 println(length(coups))
 
-#Define indices
+#Define indices and initial state
+sysenv,psi0 = prepareStateMonomer(chain_size,local_dim,filename="Input/specialPairHigh.dat");
 #System
-sys = siteinds("S=1/2",1);
-#Environment
-env = [Index(local_dim,"Boson,Site,n=$(i+1)") for i in 1:chain_size]
-#System+environment
-sysenv = vcat(sys,env);
 
-stateSys = ["Up"]   
-
-#Standard approach: chain always in the vacuum state
-stateEnv = ["0" for n=1:chain_size];
-
-stateSE = vcat(stateSys,stateEnv);
-
-psi0 = productMPS(ComplexF64,sysenv,stateSE);
 psi = psi0;
 
 Lambdas, Gammas = convert_to_Vidal(psi)
