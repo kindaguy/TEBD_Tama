@@ -101,15 +101,9 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             
             
             #Magnetization measure
-            spinMeasures=Vector{ComplexF64}([])
+            
             appo =  noprime!(op("Z",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
-            push!(spinMeasures,scalar(appo))
-            appo =  noprime!(op("X",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
-            push!(spinMeasures,scalar(appo))
-            appo =  noprime!(op("Y",s[1])*Gammas[1])*Lambdas[1]*dag(Gammas[1]*Lambdas[1])
-            push!(spinMeasures,scalar(appo))
-
-            writedlm(ioMagMeas, transpose(vcat(t, spinMeasures)), ',') 
+            writedlm(ioMagMeas, [t scalar(appo)], ',')
             flush(ioMagMeas)
             #push!(magMeas, scalar(appo))
 

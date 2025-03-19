@@ -29,7 +29,7 @@ local_dim = 5 #local dimension
 #asymptotic coupling of the chain modes.
 τ= 1 / 1000 / 50
 #Simulation time
-tmax=0.05
+tmax=0.03
 #Measurement graining
 mStep = 50
 
@@ -69,3 +69,8 @@ freqs = freqs,
 coups = coups, 
 minBondDim = 5, 
 cutoff=1E-12)
+
+
+refLambdas,refGammas = convert_to_Vidal(psi0)
+poldo = newGammas[1]*dag(refGammas[1])*newLambdas[1]*refLambdas[1]
+@show poldo
