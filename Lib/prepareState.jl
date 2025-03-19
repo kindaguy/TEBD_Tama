@@ -1,12 +1,9 @@
-import Pkg
-Pkg.activate(".")
-Pkg.instantiate()
-using ITensors, ITensorMPS
-using DelimitedFiles
-using LinearAlgebra
-
-
-
+# import Pkg
+# Pkg.activate(".")
+# Pkg.instantiate()
+# using ITensors, ITensorMPS
+# using DelimitedFiles
+# using LinearAlgebra
 
 """Prepares the state of the monomer; if kwarg filename the state of the monomer,i.e. two complex values, from a file.
 The environment starts from the factorized vaccum state.

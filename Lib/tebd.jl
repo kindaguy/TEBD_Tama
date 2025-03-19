@@ -3,6 +3,7 @@ using ITensors
 
 #import just for debugging purposes 
 include("printing_functs.jl")
+include("projectiveMeas.jl")
 
 
 
@@ -18,7 +19,8 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     minBondDim=5, 
     maxBondDim=100, 
     freqs, 
-    coups)
+    coups,
+    performProj=false)
 
     
     #total_size
@@ -77,6 +79,19 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     ioTv = open("Data/tv_TEBD.dat", "w")
     ioNormCheck = open("Data/normCheck_TEBD.dat", "w")
     ioPopMeas = open("Data/popMeas_TEBD.dat","w")
+    
+    #Projective measurement
+    if performProj
+        ioProjMeasUp=open("Data/projMeasUp_TEBD.dat","w")
+        ioProjMeasDn=open("Data/projMeasDn_TEBD.dat","w")
+    
+    #Create basis for zero and single excitation subspace
+    zeroLambdasUp,zeroGammasUp = envZeroBasisUp(s,ChainLength);
+    zeroLambdasDn,zeroGammasDn = envZeroBasisDn(s,ChainLength);
+    singleExUp =  createSingleExBasis(s,zeroGammasUp,ChainLength);
+    singleExDn =  createSingleExBasis(s,zeroGammasDn,ChainLength);
+
+    end
 
     # If needed save them to be stored in arrays
     # magMeas = Vector{ComplexF64}()
@@ -135,6 +150,29 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             writedlm(ioNormCheck, [t scalar(appoNorm)],',')
             flush(ioNormCheck)
             #push!(normCheck, scalar(appoNorm))
+
+            if performProj
+                projUp = zeros(ComplexF64,ChainLength+1)
+                projDn = zeros(ComplexF64,ChainLength+1)
+                
+                #Projection on zero exc subspace
+                projUp[1] = project(Lambdas,Gammas,zeroLambdasUp,zeroGammasUp)
+                projDn[1] = project(Lambdas,Gammas,zeroLambdasDn,zeroGammasDn)
+
+                #Projection on single exc subspace
+                Threads.@threads for i in 2:ChainLength+1
+                    projUp[i] = project(Lambdas,Gammas,zeroLambdasUp,singleExUp[i-1])
+                end
+
+                Threads.@threads for i in 2:ChainLength+1
+                    projDn[i] = project(Lambdas,Gammas,zeroLambdasDn,singleExDn[i-1])
+                end
+
+                writedlm(ioProjMeasUp, transpose(vcat(t, projUp)), ',')
+                flush(ioProjMeasUp)
+                writedlm(ioProjMeasDn, transpose(vcat(t, projDn)), ',')
+                flush(ioProjMeasDn)
+            end
         end
         
         #push!(psiV, psi)
@@ -149,6 +187,11 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     close(ioMagMeas)
     close(ioNormCheck)
     close(ioPopMeas)
+
+    if performProj
+        close(ioProjMeasUp)
+        close(ioProjMeasDn)
+    end
 
     return Gammas, Lambdas
 

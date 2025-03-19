@@ -68,4 +68,5 @@ measStep = mStep,
 freqs = freqs, 
 coups = coups, 
 minBondDim = 5, 
-cutoff=1E-12)
+cutoff=1E-12,
+performProj=true)
