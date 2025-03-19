@@ -5,6 +5,7 @@ DataJustusDelta*
 DataJustusSP*
 DataJustus*
 SpinBosonFMO*
+Check_convergence/
 
 *.ipynb
 *.nb
