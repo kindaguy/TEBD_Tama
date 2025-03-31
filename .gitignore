@@ -1,10 +1,5 @@
-DataJustusDelta100/
-DataJustusDelta50/
-DataJustusDelta100d5/
-DataJustusDelta*
-DataJustusSP*
-DataJustus*
-SpinBosonFMO*
+DataJustus*/
+SpinBosonFMO*/
 Check_convergence/
 
 *.ipynb

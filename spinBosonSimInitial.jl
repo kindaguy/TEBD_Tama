@@ -29,7 +29,7 @@ local_dim = 5 #local dimension
 #asymptotic coupling of the chain modes.
 τ= 1 / 1000 / 50
 #Simulation time
-tmax=0.05
+tmax=0.01
 #Measurement graining
 mStep = 50
 
