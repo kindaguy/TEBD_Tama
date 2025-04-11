@@ -20,7 +20,8 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     maxBondDim=100, 
     freqs, 
     coups,
-    performProj=false)
+    performProj=false,
+    performProj2=false)
 
     
     #total_size
@@ -88,9 +89,23 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     #Create basis for zero and single excitation subspace
     zeroLambdasUp,zeroGammasUp = envZeroBasisUp(s,ChainLength);
     zeroLambdasDn,zeroGammasDn = envZeroBasisDn(s,ChainLength);
+    println("Creating single ex basis...")
     singleExUp =  createSingleExBasis(s,zeroGammasUp,ChainLength);
     singleExDn =  createSingleExBasis(s,zeroGammasDn,ChainLength);
+    println("...done")
 
+    end
+
+    #ATTENTION: two-site (projections)measurements can be performed
+    #only if single-site projections are enabled
+    if performProj2 && performProj
+        ioProjMeas2Up=open("Data/projMeas2Up_TEBD.dat","w")
+        ioProjMeas2Dn=open("Data/projMeas2Dn_TEBD.dat","w")
+
+        println("Creating doulble excitation basis...")
+        twoExUp = createDoubleExBasis(s,zeroGammasUp,ChainLength)
+        twoExDn = createDoubleExBasis(s,zeroGammasDn,ChainLength)
+        println("...done!")
     end
 
     # If needed save them to be stored in arrays
@@ -173,6 +188,38 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                 writedlm(ioProjMeasDn, transpose(vcat(t, projDn)), ',')
                 flush(ioProjMeasDn)
             end
+
+            if performProj2 && performProj
+
+                numOfProjs = size(twoExUp,1)
+                projUp = zeros(ComplexF64,numOfProjs)
+                projDn = zeros(ComplexF64,numOfProjs)
+                
+                #Projection on double exc subspace
+                #we apply lightconing: we know that excitation have a 
+                #propagation speed which is < 2 * k∞. This defines a light-cone
+                #It is thus useless to measure the projection if
+                #either of the sites are outside the light cone
+                lcone = (step-1)* tau * 2 * 1000
+                Threads.@threads for i=1:numOfProjs
+                    p1 = div(i-1,ChainLength)   #i = p1+1
+                    p2 = (i-1)%ChainLength      #j = p2+1
+                    #...but we are conservative so...
+                    if p1 <= lcone +2 && p2 <= lcone + 2
+                        projUp[i] = project(Lambdas,Gammas,zeroLambdasUp,twoExUp[i])
+                        projDn[i] = project(Lambdas,Gammas,zeroLambdasDn,twoExDn[i])
+                    end
+                end
+
+                # Threads.@threads for i=1:numOfProjs
+                #     projDn[i] = project(Lambdas,Gammas,zeroLambdasDn,twoExDn[i])
+                # end
+
+                writedlm(ioProjMeas2Up, transpose(vcat(t, projUp)), ',')
+                flush(ioProjMeasUp)
+                writedlm(ioProjMeas2Dn, transpose(vcat(t, projDn)), ',')
+                flush(ioProjMeasDn)
+            end
         end
         
         #push!(psiV, psi)
@@ -193,11 +240,16 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
         close(ioProjMeasDn)
     end
 
+    if performProj2 && performProj
+        close(ioProjMeas2Up)
+        close(ioProjMeas2Dn)
+    end
+
     return Gammas, Lambdas
 
 end
 
-function SingleEx_evolution_TEBD(Gammas, Lambdas, s; 
+ function SingleEx_evolution_TEBD(Gammas, Lambdas, s; 
     ϵ,
     Δ, 
     sysenvInt::String, 

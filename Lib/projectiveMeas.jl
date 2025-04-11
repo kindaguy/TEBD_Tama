@@ -27,9 +27,43 @@ function createSingleExBasis(inds,refGammas,chain_length)
    return [createSingleEx(inds,refGammas,i) for i in 1:chain_length]
 end
 
+
+"""createDoubleExBasis(inds,refGammas,chain_length):returns the single excitation subspace basis starting from the seed refGammas,
+that model an environment in the vacuum state
+"""
+function createDoubleExBasis(inds,refGammas,chain_length)
+   doubleExBasis = Vector{Vector{ITensor}}([])
+   for i in 1:chain_length
+      appo = createSingleEx(inds,refGammas,i)
+      for j in i:chain_length
+         pippo = createSingleEx(inds,appo,j)
+         push!(doubleExBasis,pippo)
+      end
+   end
+   return doubleExBasis
+end
+
+"""indDoubleExBasis(chain_length):returns a k =>(i,j) dictionary
+"""
+function indDoubleExBasis(chain_length)
+   Dict{Int64,Tuple{Int64,Int64}}()
+   veci = Vector{Int64}([])
+   for i in 1:chain_length
+      for j in i:chain_length
+         push!(veci,1)
+         a=length(veci)
+         push!(inds,a=>(i,j))
+      end
+   end
+   return inds
+end
+
+
+
+
 """project(LambdasPsi,GammasPsi,LambdasPhi,GammasPhi) performs the projection <ϕ|ψ>
 """
-
+#Note: this function remains always the same: does not matter what's ϕ
 function project(stateLambdas,stateGammas,projLambdas,projGammas)
    ll = size(projLambdas)[1] 
    appo = stateGammas[1]*stateLambdas[1]*dag(projGammas[1]*projLambdas[1])

@@ -1,6 +1,7 @@
 DataJustus*/
 SpinBosonFMO*/
 Check_convergence/
+.CondaPkg
 
 *.ipynb
 *.nb
