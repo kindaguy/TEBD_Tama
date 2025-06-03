@@ -11,6 +11,13 @@ function envZeroBasisDn(inds,nchain)
    return convert_to_Vidal(refDn);
 end
 
+"""
+   twoSiteMod(inds,refGammas,site1,op1,site2,op2)
+
+Prepares the state |ψ'> = op1 op2 |ψ> with op1 and op2 applied to sites
+site1 and site2 respectively
+"""
+
 """createSingleEx(inds,refGammas,site): Returns Vidal's Gammas matrices for the site-th element of the single excitation subspace basis
    Note that Lambda matrices are always trivial (factorized state)
 """

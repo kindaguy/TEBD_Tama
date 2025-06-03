@@ -4,6 +4,7 @@ using ITensors
 #import just for debugging purposes 
 include("printing_functs.jl")
 include("projectiveMeas.jl")
+include("twoSiteMeas.jl")
 
 
 
@@ -21,7 +22,9 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     freqs, 
     coups,
     performProj=false,
-    performProj2=false)
+    performProj2=false,
+    performOcc = false,
+    trackBondDim = false)
 
     
     #total_size
@@ -107,7 +110,14 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
         twoExDn = createDoubleExBasis(s,zeroGammasDn,ChainLength)
         println("...done!")
     end
+     
+    if performOcc
+        ioOcc=open("Data/toOccData.dat","w")
+    end
 
+    if trackBondDim
+        ioTrackBondDim=open("Data/bondDims.dat","w")
+    end
     # If needed save them to be stored in arrays
     # magMeas = Vector{ComplexF64}()
     # tv = Vector{Float64}()
@@ -200,7 +210,7 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                 #propagation speed which is < 2 * k∞. This defines a light-cone
                 #It is thus useless to measure the projection if
                 #either of the sites are outside the light cone
-                lcone = (step-1)* tau * 2 * 1000
+                lcone = (step-1)* tau * 2 * coups[end]
                 Threads.@threads for i=1:numOfProjs
                     p1 = div(i-1,ChainLength)   #i = p1+1
                     p2 = (i-1)%ChainLength      #j = p2+1
@@ -220,7 +230,51 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                 writedlm(ioProjMeas2Dn, transpose(vcat(t, projDn)), ',')
                 flush(ioProjMeasDn)
             end
+            
+
+            if performOcc
+                indTSM = indDoubleMeas(ChainLength)
+                numTSM = length(indTSM)
+                TSM = zeros(ComplexF64,numTSM)
+                
+                
+                #Projection on double exc subspace
+                #we apply lightconing: we know that excitation have a 
+                #propagation speed which is < 2 * k∞. This defines a light-cone
+                #It is thus useless to measure the projection if
+                #either of the sites are outside the light cone
+                lcone = (step-1)* tau * 2 * coups[end]
+                Threads.@threads for i=1:numTSM
+                    p1 = indTSM[i][1] 
+                    p2 = indTSM[i][2]
+                    #...but we are conservative so...
+                    if  p2 <= max(20,lcone + 2)
+                        #Here we create the projecting state
+                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "A",p1, "Adag")
+                        projLambdas = Lambdas;
+                        TSM[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
+                    end
+                end
+
+
+                writedlm(ioOcc, transpose(vcat(t, TSM)), ',')
+                flush(ioOcc)
+            end
+
+
+
+            if trackBondDim
+
+                bondDim = [dim(inds(a)[1]) for a in Lambdas]
+                writedlm(ioTrackBondDim, transpose(vcat(t,bondDim)), ',')
+                flush(ioTrackBondDim)
+            
+            end
+
+        
+        
         end
+        
         
         #push!(psiV, psi)
         #push!(GammasV, Gammas)
@@ -243,6 +297,12 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     if performProj2 && performProj
         close(ioProjMeas2Up)
         close(ioProjMeas2Dn)
+    end
+    if performOcc
+        close(ioOcc)
+    end
+    if trackBondDim
+        close(ioTrackBondDim)
     end
 
     return Gammas, Lambdas
