@@ -24,6 +24,7 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     performProj=false,
     performProj2=false,
     performOcc = false,
+    performThermo = false,
     trackBondDim = false)
 
     
@@ -113,6 +114,11 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
      
     if performOcc
         ioOcc=open("Data/toOccData.dat","w")
+    end
+
+    if performThermo
+        ioThermoDADA=open("Data/toThermoDADA.dat","w")
+        ioThermoAA=open("Data/toThermoAA.dat","w")
     end
 
     if trackBondDim
@@ -262,6 +268,41 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
             end
 
 
+            if performThermo
+                indTSM = indDoubleMeas(ChainLength)
+                numTSM = length(indTSM)
+                TSMDADA = zeros(ComplexF64,numTSM)
+                TSMAA = zeros(ComplexF64,numTSM)
+                
+                
+                #Projection on double exc subspace
+                #we apply lightconing: we know that excitation have a 
+                #propagation speed which is < 2 * k∞. This defines a light-cone
+                #It is thus useless to measure the projection if
+                #either of the sites are outside the light cone
+                lcone = (step-1)* tau * 2 * coups[end]
+                Threads.@threads for i=1:numTSM
+                    p1 = indTSM[i][1] 
+                    p2 = indTSM[i][2]
+                    #...but we are conservative so...
+                    if  p2 <= max(20,lcone + 2)
+                        #Here we create the projecting state
+                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "Adag",p1, "Adag")
+                        projLambdas = Lambdas;
+                        TSMDADA[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
+
+                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "A",p1, "A")
+                        projLambdas = Lambdas;
+                        TSMAA[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
+                    end
+                end
+
+
+                writedlm(ioThermoDADA, transpose(vcat(t, TSMDADA)), ',')
+                flush(ioThermoDADA)
+                writedlm(ioThermoAA, transpose(vcat(t, TSMAA)), ',')
+                flush(ioThermoAA)
+            end
 
             if trackBondDim
 
@@ -301,6 +342,12 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
     if performOcc
         close(ioOcc)
     end
+
+    if performThermo
+        close(ioThermoDADA)
+        close(ioThermoAA)
+    end
+    
     if trackBondDim
         close(ioTrackBondDim)
     end
