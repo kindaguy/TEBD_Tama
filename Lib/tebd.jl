@@ -256,7 +256,7 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                     #...but we are conservative so...
                     if  p2 <= max(20,lcone + 2)
                         #Here we create the projecting state
-                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "A",p1, "Adag")
+                        projGammas = applyTwoSiteOp(s,Gammas, p2, "A",p1, "Adag")
                         projLambdas = Lambdas;
                         TSM[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
                     end
@@ -287,11 +287,11 @@ function SpinBoson_evolution_TEBD(Gammas, Lambdas, s;
                     #...but we are conservative so...
                     if  p2 <= max(20,lcone + 2)
                         #Here we create the projecting state
-                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "Adag",p1, "Adag")
+                        projGammas = applyTwoSiteOp(s,Gammas, p2, "Adag",p1, "Adag")
                         projLambdas = Lambdas;
                         TSMDADA[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
 
-                        projGammas = applyTwoSiteOp(sysenv,Gammas, p2, "A",p1, "A")
+                        projGammas = applyTwoSiteOp(s,Gammas, p2, "A",p1, "A")
                         projLambdas = Lambdas;
                         TSMAA[i] = projectBetween(Lambdas,Gammas,projLambdas,projGammas,p2,p1)
                     end
